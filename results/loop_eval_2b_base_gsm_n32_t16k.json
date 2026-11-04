@@ -1,0 +1,15 @@
+{
+  "tag": "2b_base_gsm_n32_t16k",
+  "model": "models/qwen3.5-2B-base",
+  "n": 32,
+  "max_tokens": 16384,
+  "accuracy": 0.46875,
+  "cut_rate": 0.5625,
+  "closed_rate": 0.4375,
+  "loop_rate": 0.1875,
+  "mean_repetition": 0.22109375,
+  "mean_tokens": 12082.71875,
+  "total_tokens": 386647,
+  "seconds": 1704.5,
+  "throughput_tok_s": 226.8
+}

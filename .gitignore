@@ -1,0 +1,5 @@
+models/
+.venv/
+__pycache__/
+*.npz
+.DS_Store

@@ -1,0 +1,15 @@
+{
+  "tag": "wsp_n32_t16k",
+  "model": "models/qwen3.5-0.8B-wsp",
+  "n": 32,
+  "max_tokens": 16384,
+  "accuracy": 0.375,
+  "cut_rate": 0.34375,
+  "closed_rate": 0.65625,
+  "loop_rate": 0.1875,
+  "mean_repetition": 0.3031875,
+  "mean_tokens": 12248.0625,
+  "total_tokens": 391938,
+  "seconds": 1042.6,
+  "throughput_tok_s": 375.9
+}

@@ -1,0 +1,20 @@
+{"id": "ho_enum_00", "source": "enum", "problem": "List every Best Picture Oscar winner from 1990 to 2020."}
+{"id": "ho_enum_01", "source": "enum", "problem": "Name all the US states and their capitals."}
+{"id": "ho_enum_02", "source": "enum", "problem": "List all the books in the Harry Potter series with their publication years, then every Hogwarts professor mentioned in them."}
+{"id": "ho_enum_03", "source": "enum", "problem": "List every member state of the European Union with the year it joined."}
+{"id": "ho_enum_04", "source": "enum", "problem": "Name all the stations of London Underground's Victoria line, in order."}
+{"id": "ho_enum_05", "source": "enum", "problem": "List every UEFA Champions League winner since 1992."}
+{"id": "ho_enum_06", "source": "enum", "problem": "List all the songs on the Beatles album Abbey Road, in track order."}
+{"id": "ho_enum_07", "source": "enum", "problem": "Name every Secretary-General of the United Nations, in order."}
+{"id": "ho_enum_08", "source": "enum", "problem": "Liste tous les présidents de la Cinquième République française avec leurs dates de mandat."}
+{"id": "ho_enum_09", "source": "enum", "problem": "Liste toutes les préfectures des départements d'Île-de-France et de Bretagne."}
+{"id": "ho_enum_10", "source": "enum", "problem": "List all the bones of the human hand."}
+{"id": "ho_enum_11", "source": "enum", "problem": "List every Pixar feature film with its release year."}
+{"id": "ho_clean_00", "source": "clean", "problem": "How should I structure a weekly one-on-one meeting with a new team member?"}
+{"id": "ho_clean_01", "source": "clean", "problem": "Explain what a database index is and when it can slow things down."}
+{"id": "ho_clean_02", "source": "clean", "problem": "Write a short thank-you note to a colleague who helped me finish a project."}
+{"id": "ho_clean_03", "source": "clean", "problem": "What are three good habits for keeping a Git history clean?"}
+{"id": "ho_clean_04", "source": "clean", "problem": "Explique la différence entre un prêt à taux fixe et un prêt à taux variable."}
+{"id": "ho_clean_05", "source": "clean", "problem": "Propose un menu équilibré pour un dîner végétarien de quatre personnes."}
+{"id": "ho_clean_06", "source": "clean", "problem": "Should a small startup use microservices or a monolith? Explain briefly."}
+{"id": "ho_clean_07", "source": "clean", "problem": "How can I make a slow-cooked tomato sauce taste less acidic?"}

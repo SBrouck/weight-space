@@ -1,0 +1,15 @@
+{
+  "tag": "ho_2b-L12-13-k6-random_t6k",
+  "model": "models/2b-L12-13-k6-random",
+  "n": 20,
+  "max_tokens": 6144,
+  "accuracy": null,
+  "cut_rate": 0.55,
+  "closed_rate": 0.45,
+  "loop_rate": 0.45,
+  "mean_repetition": 0.4131,
+  "mean_tokens": 4726.15,
+  "total_tokens": 94523,
+  "seconds": 334.4,
+  "throughput_tok_s": 282.7
+}

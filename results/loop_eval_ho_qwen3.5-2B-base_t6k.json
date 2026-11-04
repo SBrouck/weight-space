@@ -1,0 +1,15 @@
+{
+  "tag": "ho_qwen3.5-2B-base_t6k",
+  "model": "models/qwen3.5-2B-base",
+  "n": 20,
+  "max_tokens": 6144,
+  "accuracy": null,
+  "cut_rate": 0.55,
+  "closed_rate": 0.45,
+  "loop_rate": 0.55,
+  "mean_repetition": 0.43100000000000005,
+  "mean_tokens": 4532.45,
+  "total_tokens": 90649,
+  "seconds": 319.6,
+  "throughput_tok_s": 283.6
+}

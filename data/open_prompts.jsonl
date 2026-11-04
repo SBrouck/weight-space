@@ -1,0 +1,32 @@
+{"id": "open_00", "source": "open", "problem": "List every episode title of the first season of The Office (US), in order."}
+{"id": "open_01", "source": "open", "problem": "Name all 88 IAU constellations."}
+{"id": "open_02", "source": "open", "problem": "List all 151 original Pokémon in Pokédex order."}
+{"id": "open_03", "source": "open", "problem": "List every country that borders Germany and the length of each border in kilometres."}
+{"id": "open_04", "source": "open", "problem": "Give the full list of Nobel Prize in Literature winners from 1990 to 2010."}
+{"id": "open_05", "source": "open", "problem": "List all the moons of Uranus."}
+{"id": "open_06", "source": "open", "problem": "Name every French Prime Minister of the Fifth Republic, in order."}
+{"id": "open_07", "source": "open", "problem": "List all the chemical elements with their atomic numbers from 1 to 60."}
+{"id": "open_08", "source": "open", "problem": "List every studio album by David Bowie with its release year."}
+{"id": "open_09", "source": "open", "problem": "Name all the stations of Paris Métro line 1, from La Défense to Château de Vincennes."}
+{"id": "open_10", "source": "open", "problem": "List all the Formula 1 world champions since 1980."}
+{"id": "open_11", "source": "open", "problem": "Enumerate all the official languages of India listed in the Eighth Schedule."}
+{"id": "open_12", "source": "open", "problem": "Should I learn Rust or Go first as a backend developer? Give a recommendation."}
+{"id": "open_13", "source": "open", "problem": "Plan a 3-day trip to Lisbon on a budget of 400 euros."}
+{"id": "open_14", "source": "open", "problem": "My Python script is slow when it reads a 2 GB CSV file. What should I try?"}
+{"id": "open_15", "source": "open", "problem": "Explain the difference between a mutex and a semaphore to a junior developer."}
+{"id": "open_16", "source": "open", "problem": "Write a polite email declining a meeting invitation because of a scheduling conflict."}
+{"id": "open_17", "source": "open", "problem": "What are the pros and cons of renting versus buying an apartment in a big city?"}
+{"id": "open_18", "source": "open", "problem": "How do I tell my manager that a deadline is unrealistic?"}
+{"id": "open_19", "source": "open", "problem": "Summarise the causes of the French Revolution in five bullet points."}
+{"id": "open_20", "source": "open", "problem": "Is it a good idea to store user sessions in a database or in Redis? Explain."}
+{"id": "open_21", "source": "open", "problem": "Suggest a name for a small bakery that specialises in sourdough bread."}
+{"id": "open_22", "source": "open", "problem": "What is the best way to prepare for a technical interview in two weeks?"}
+{"id": "open_23", "source": "open", "problem": "Explain how a hash map handles collisions."}
+{"id": "open_24", "source": "open", "problem": "Explique simplement la différence entre un CDD et un CDI."}
+{"id": "open_25", "source": "open", "problem": "Quelles sont les étapes pour créer une micro-entreprise en France?"}
+{"id": "open_26", "source": "open", "problem": "Donne-moi la liste complète des départements français avec leur numéro."}
+{"id": "open_27", "source": "open", "problem": "Comment calculer son taux d'épargne mensuel? Donne un exemple."}
+{"id": "open_28", "source": "open", "problem": "Rédige un message court pour relancer un client qui n'a pas payé sa facture."}
+{"id": "open_29", "source": "open", "problem": "Quels sont les avantages et inconvénients du télétravail pour une petite équipe?"}
+{"id": "open_30", "source": "open", "problem": "Explique ce qu'est la TVA à un enfant de 12 ans."}
+{"id": "open_31", "source": "open", "problem": "Liste toutes les régions françaises et leur chef-lieu."}

@@ -1,0 +1,13 @@
+{
+  "tag": "wsp_n64_t4096",
+  "model": "models/qwen3.5-0.8B-wsp",
+  "n": 64,
+  "max_tokens": 4096,
+  "accuracy": 0.125,
+  "cut_rate": 0.859375,
+  "closed_rate": 0.140625,
+  "mean_tokens": 3831.1875,
+  "total_tokens": 245196,
+  "seconds": 604.5,
+  "throughput_tok_s": 405.6
+}

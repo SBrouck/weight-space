@@ -1,0 +1,15 @@
+{
+  "tag": "base_n32_t16k",
+  "model": "models/qwen3.5-0.8B-base",
+  "n": 32,
+  "max_tokens": 16384,
+  "accuracy": 0.03125,
+  "cut_rate": 0.9375,
+  "closed_rate": 0.0625,
+  "loop_rate": 0.9375,
+  "mean_repetition": 0.82925,
+  "mean_tokens": 15563.71875,
+  "total_tokens": 498039,
+  "seconds": 1768.2,
+  "throughput_tok_s": 281.7
+}
