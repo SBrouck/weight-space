@@ -1,0 +1,15 @@
+{
+  "tag": "ho2_2b-conc-L16-17-k3_t6k",
+  "model": "models/2b-conc-L16-17-k3",
+  "n": 40,
+  "max_tokens": 6144,
+  "accuracy": null,
+  "cut_rate": 0.6,
+  "closed_rate": 0.4,
+  "loop_rate": 0.475,
+  "mean_repetition": 0.4405,
+  "mean_tokens": 4734.15,
+  "total_tokens": 189366,
+  "seconds": 687.8,
+  "throughput_tok_s": 275.3
+}

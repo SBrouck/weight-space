@@ -3,3 +3,4 @@ models/
 __pycache__/
 *.npz
 .DS_Store
+harness/kernel_env/

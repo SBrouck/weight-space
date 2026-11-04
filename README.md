@@ -113,6 +113,22 @@ The only enumeration that does not loop, the chemical elements 1–60, does not 
 - The repetition score is a good loop *detector* but a poor *success* criterion. The success criterion is now "closes thinking and answers".
 - Next target: amplify a "conclude" direction (positions just before `</think>` in answers that end, against positions in answers that spiral), rather than remove the loop direction. Use several samples per prompt so the control is interpretable.
 
+### Second try: amplify a "conclude" direction
+
+`scripts/capture_conclude.py` contrasts the 64 tokens before `</think>` in answers that end with positions inside loops. The resulting direction `c` separates the two sets on held-out samples (AUC 0.95–0.97 in layers 4–22). In layers 9–15 it is almost the opposite of the loop direction (cos(c, −u) = 0.90–0.92), so "conclude" and "do not loop" are nearly one axis there. It is more distinct in late layers (0.75 in layers 20–21).
+
+Edit: `apply_edit.py --mode amplify`, `w' = w + 3 (c·w) c` on the 64 neurons per layer that push most along `c` when concluding. Screen on `data/open_holdout.jsonl`, 2 samples per prompt, 6,144 tokens:
+
+| | Base | Conclude L20–21 | Conclude L16–17 | Random L20–21 |
+|---|---|---|---|---|
+| 24 enumeration samples: **thinking closed** | **2** | **2** | **3** | **1** |
+| 24 enumeration samples: verbatim loops | 17 | 13 | 17 | 20 |
+| 16 clean samples: closed | 16 | 14 | 13 | 15 |
+
+**Reading.** No edit makes the 2B conclude on enumerations, and the clean prompts get slightly worse. Two attempts point the same way: in Qwen3.5-2B, enumeration doom-looping comes from facts the model cannot recall, not from a single-direction defect, and a rank-one weight edit does not fix it.
+
+**Next.** Go back to a case with known ground truth. The 0.8B math loop has a published edit, so phase 2 asks: can a coding agent on a Mac rediscover it, with a harness that only gives it weights, a forward-pass budget and dev and holdout sets?
+
 ## Layout
 
 ```

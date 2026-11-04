@@ -73,11 +73,14 @@ def main() -> None:
     parser.add_argument("--offset", type=int, default=0)
     parser.add_argument("--max-tokens", type=int, default=4096)
     parser.add_argument("--batch", type=int, default=32)
+    parser.add_argument("--samples", type=int, default=1, help="samples per problem")
     parser.add_argument("--tag", required=True)
     args = parser.parse_args()
 
     with open(args.data, encoding="utf-8") as f:
         problems = [json.loads(line) for line in f][args.offset : args.offset + args.n]
+    if args.samples > 1:  # one row per (problem, sample), ids suffixed #s
+        problems = [{**p, "id": f"{p['id']}#{s}"} for p in problems for s in range(args.samples)]
 
     # Resume: rows already written for this tag are kept and their problems skipped.
     out_path = f"results/loop_eval_{args.tag}.jsonl"

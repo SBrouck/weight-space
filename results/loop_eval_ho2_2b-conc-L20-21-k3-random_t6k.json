@@ -1,0 +1,15 @@
+{
+  "tag": "ho2_2b-conc-L20-21-k3-random_t6k",
+  "model": "models/2b-conc-L20-21-k3-random",
+  "n": 40,
+  "max_tokens": 6144,
+  "accuracy": null,
+  "cut_rate": 0.6,
+  "closed_rate": 0.4,
+  "loop_rate": 0.525,
+  "mean_repetition": 0.48285,
+  "mean_tokens": 4811.9,
+  "total_tokens": 192476,
+  "seconds": 719.0,
+  "throughput_tok_s": 267.7
+}
