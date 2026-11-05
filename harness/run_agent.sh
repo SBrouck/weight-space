@@ -15,7 +15,7 @@ SESSION=$(cat "$SESSION_FILE")
 cd "$WS"
 
 ALLOWED='Bash(./kpy:*) Bash(./fwd:*) Read Write Edit Glob Grep'
-DENIED='WebFetch WebSearch Agent Bash(cd:*) Read(//Users/sachabrouck/ai-engineering/**) Read(//Users/sachabrouck/.cache/**) Read(//Users/sachabrouck/.claude/**)'
+DENIED="WebFetch WebSearch Agent Bash(cd:*) Read(/$HOME/ai-engineering/**) Read(/$HOME/.cache/**) Read(/$HOME/.claude/**)"
 
 # A generation pass takes 10-30 minutes: let the agent's Bash calls run up to 45 minutes.
 export BASH_DEFAULT_TIMEOUT_MS=2700000 BASH_MAX_TIMEOUT_MS=2700000
