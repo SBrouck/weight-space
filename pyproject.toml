@@ -17,3 +17,8 @@ package = false
 members = [
     "harness/kernel_env",
 ]
+
+[dependency-groups]
+dev = [
+    "matplotlib>=3.11.2",
+]

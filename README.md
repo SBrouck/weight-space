@@ -1,185 +1,113 @@
 # weight-space
 
-Gradient-free weight edits that remove thinking loops from small local models, on a Mac with MLX.
+**Can you fix a language model by editing its weights directly, with no training, on a laptop? And can a coding agent find the edit by itself?**
 
-Builds on [Sparks of Weight-Space Programming](https://rikiyat.github.io/blog/weight-space-programming) (Takehi, Teoh, Zhang, Khattab, 2026). In that work, GPT-6 Astra edited Qwen3.5-0.8B's weights without training and cut its thinking loops. Here the goals are:
+Days after [*Sparks of Weight-Space Programming*](https://rikiyat.github.io/blog/weight-space-programming) (Takehi, Teoh, Zhang, Khattab, 2026) showed GPT-6 Astra editing Qwen3.5-0.8B's weights to stop its thinking loops, this repo:
+- takes the edit apart on Apple Silicon (MLX, one M5, 24 GB);
+- tests whether the idea transfers to a 2B model;
+- rebuilds the harness that was never released, with Claude Code as the editor agent.
 
-1. **Phase 0:** reproduce and understand that edit on Apple Silicon.
-2. **Phase 1:** find the loop direction by hand in Qwen3.5-2B and 4B, and measure loops outside math.
-3. **Phase 2:** build an MLX edit-and-verify harness where a coding agent proposes edits, and gate each edit on dev, holdout and drift checks.
+Everything here runs locally, and every number comes with its raw results in `results/` and `runs/`.
 
-## Phase 0: what the published edit actually is
+---
 
-`scripts/diff_weights.py` compares `Qwen/Qwen3.5-0.8B` (revision `2fc0636`) with `RikiyaT/Qwen3.5-0.8B-weight-space-programming`.
+## TL;DR
 
-| | Layer 15 `mlp.down_proj` | Layer 19 `mlp.down_proj` |
-|---|---|---|
-| Changed tensors (of 320) | 1 | 1 |
-| Changed columns (MLP neurons) | 64 of 3,584 | 64 of 3,584 |
-| Relative change `‖ΔW‖/‖W‖` | 0.106 | 0.081 |
-| Rank-one share of ΔW on changed columns | 1.000 | 1.000 |
-| corr(Δ coefficient, `u·w_j`) | −1.000 | −1.000 |
-| Strength `k` in `w_j' = w_j − k (u·w_j) u` | **6.0** | **6.0** |
+1. **The published edit is a rank-one flip, not a removal.** It touches 0.016 % of the weights: 64 neurons in each of two MLPs. Each edited neuron's component along one direction is reversed and amplified 5× (`k = 6`).
+2. **The edit only shows when the model is allowed to finish.** At a 4k-token budget it looks useless. At 16k, verbatim loops fall from 94 % to 19 % and accuracy rises from 3 % to 38 %.
+3. **It does not transfer to the 2B, and that is informative.** Qwen3.5-2B loops on 13 of 14 "list everything" prompts. A clean loop direction exists (AUC 0.999), but no rank-one edit makes the model finish: it loops because it cannot recall the facts. An edit can remove an obstacle; it cannot add knowledge.
+4. **A coding agent found a different working edit by itself.** Without being told the answer, Claude Code rewired six loop-detector neurons into an "if looping, close thinking" circuit. On 64 unseen problems, strict accuracy went from 15.6 % to 23.4 %, against 28.1 % for the published edit. Neither gain is significant at this sample size.
+5. **The agent also found a hole in my grader** and tried to exploit it, before it gave up for good reasons. The strict metric now closes it.
 
-`|cos(u₁₅, u₁₉)| = 0.85`, so the two layers share nearly the same direction.
+---
 
-**Reading.**
-- Each edited neuron loses its component along one residual-stream direction `u`.
-- With `k = 6`, the edit is not just a removal (`k = 1`). It **flips the component and amplifies it 5×**: each of these neurons now writes against the loop direction.
-- This matches the sign-inversion edits in *When Can One Neuron Fix Repetition Loops in LLMs?* (Lazaridis et al., [arXiv 2606.13705](https://arxiv.org/abs/2606.13705)). On Gemma 4 E2B, a single sign-inverted neuron was enough.
+## 1. Anatomy of the published edit
 
-## Phase 0: loops and speed on an M5 (24 GB)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/fig1_edit_anatomy-dark.png">
+  <img alt="Per-neuron norm of the weight change in layers 15 and 19: 64 of 3,584 columns edited in each" src="figures/fig1_edit_anatomy-light.png">
+</picture>
 
-`scripts/loop_eval.py` uses GSM8K train problems, thinking mode on, and the paper's sampling (temperature 0.6, top-p 0.95, top-k 20, presence penalty 1.5). It runs batched MLX generation.
+`scripts/diff_weights.py` diffs the base and edited checkpoints:
+- only 2 of 320 tensors change: `mlp.down_proj` in layers 15 and 19;
+- on the changed columns, ΔW is exactly rank one (share 1.000);
+- every edited column satisfies `w' = w − 6 (u·w) u`, with corr = −1.000.
 
-Throughput:
-- about 62 tok/s on a single stream;
-- about 330 tok/s at batch 8.
+The two layers use almost the same direction (|cos| = 0.85). With `k = 6` the component is reversed, not removed, so these neurons now write *against* the loop. This matches the single-neuron sign inversion of [Lazaridis et al., 2026](https://arxiv.org/abs/2606.13705).
 
-Two loop measures are used:
-- **cut**: the answer hits the token budget before `</think>`;
-- **loop**: in the last 1,024 tokens, at least half of the 16-grams repeat earlier ones. This separates a verbatim loop from a long but progressing chain of thought, even when the answer is cut.
+## 2. The effect depends on the budget
 
-**At a 4,096-token budget the edit barely shows** (64 problems):
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/fig2_budget-dark.png">
+  <img alt="Cut share and accuracy at 4k, 8k and 16k tokens for base and published edit" src="figures/fig2_budget-light.png">
+</picture>
 
-| | Base | Edited |
-|---|---|---|
-| Cut | 92 % | 86 % |
-| Accuracy | 7.8 % | 12.5 % |
+The edited model's correct answers have a median of about 9k thinking tokens. The edit stops the model spiralling; it does not make it shorter. At 4k, a long productive chain and a loop are both cut, so the two models look the same.
 
-The edited model's correct answers in the paper have a median of about 9,000 tokens. At 4k, long productive thinking and real loops are both cut, so the budget is too short to see the effect.
+**Lesson for any loop metric: score repetition, not truncation.** `loop_eval.py` measures the share of repeated 16-grams in the last 1,024 tokens. That separates a loop from a long chain, even on cut answers.
 
-**At a 16,384-token budget the effect is clear** (32 problems, paired):
+## 3. What a coding agent finds on its own
 
-| | Base | Edited |
-|---|---|---|
-| Loop (repetition ≥ 0.5) | **94 %** | **19 %** |
-| Mean repetition score | 0.83 | 0.30 |
-| Thinking closed | 6 % | 66 % |
-| Cut at budget | 94 % | 34 % |
-| Accuracy (strict `\boxed{}`) | 3.1 % | 37.5 % |
-| Rescued / regressed | | **11 / 0** |
-| Mean tokens | 15,564 | 12,248 |
+The harness (`harness/`) recreates the source paper's rules. The editor is Claude Code (Opus 5.5), run headless and never told what the published edit is.
 
-Remaining failures of the edited model, read from the saved tails:
-- **Post-thinking spirals.** Five answers close `</think>`, then keep re-checking until the budget runs out.
-- **Unboxed answers.** Two answers finish without `\boxed{}` (one correct, "Each top cost $5"). Strict grading counts them wrong, so accuracy is a lower bound.
+<details>
+<summary><b>Harness rules</b></summary>
 
-Throughput falls as the context grows: 450 tok/s at 4k, 280–380 tok/s at 16k, batch 32. A 32-problem run at 16k takes 17–30 minutes.
+- **Kernel**: numpy only, in a venv without MLX, so the agent can read weights but not run the model. `save_edit` rejects edits to the embedding, the output head and the final norm, and whole-tensor rescaling.
+- **Forward passes are budgeted** (`./fwd`). `generate` answers 32 GSM8K problems at 8k tokens, base, edited or paired. `read` is a teacher-forced read of MLP activations. Run 1 had 12 passes.
+- **Isolation**: the holdout ids never enter the agent's workspace. Reads of the repo, the model cache and `~/.claude` are denied, and its only tools are `./kpy`, `./fwd` and file tools in its folder.
+- **Method imposed by the task**: a dev/holdout split before any edit, paired comparisons, a control for every claimed effect, and an honest report (`harness/task.md`).
 
-**Takeaway for phase 1:** measure at least 16k tokens and score loops with the repetition metric, not only with the cut.
+</details>
 
-## Phase 1: baseline of Qwen3.5-2B
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/fig3_agent_trajectory-dark.png">
+  <img alt="Paired base vs edited accuracy for each of the agent's generation passes" src="figures/fig3_agent_trajectory-light.png">
+</picture>
 
-Same protocol, 16,384-token budget, batch 16, about 160–230 tok/s.
+What the agent learned, in its own words (`runs/run1/final_report.md`):
+- *"The neurons I found are signatures of the loop state, not causes."* Ablating them does nothing, so it **reused them as detectors** and made them vote for `</think>`.
+- *"Any token pushed by the detectors, once emitted, is itself a repetition, so it feeds the detectors and runs away."* Doses of 3 and above produce `</think></think>…` for 8k tokens.
+- It tried lexical tricks: pushing "Wait" down, and pushing `\boxed` up to exploit a grader that read boxes inside unfinished thinking. Both failed and were dropped.
+- At S = 2 the exit fires *inside* the loop, around 4.5k tokens. On its own holdout it scored 2/32 → 9/32, while a random direction of the same size scored 4/32 → 3/32.
 
-**GSM8K** (32 problems): the 2B loops far less than the 0.8B. Its failure on math is long thinking rather than loops.
+Run 1 took 91 turns over 3 h 15 and cost about $5 at list price.
 
-| | 0.8B base | 0.8B edited | **2B base** |
-|---|---|---|---|
-| Loop | 94 % | 19 % | **19 %** |
-| Cut at budget | 94 % | 34 % | 56 % |
-| Accuracy | 3.1 % | 37.5 % | 46.9 % |
+## 4. The independent check
 
-**Open prompts** (`data/open_prompts.jsonl`, 32 prompts, 8 in French): **the 2B loops on almost every enumeration.**
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/fig4_holdout-dark.png">
+  <img alt="Strict accuracy and loop rate on 64 unseen problems for base, agent edit and published edit, with Wilson intervals" src="figures/fig4_holdout-light.png">
+</picture>
 
-| Prompt type | Loops (repetition ≥ 0.5) | Typical length when it ends |
-|---|---|---|
-| Exhaustive lists of partly known facts (14, e.g. constellations, Pokémon, French départements) | **13 / 14**, repetition 0.70–0.96 | always cut at 16k |
-| Advice, explanation, writing (18) | 3 / 18 (Lisbon trip, micro-entreprise steps, VAT for a child) | 1,200–3,800 tokens, repetition ≈ 0 |
+The setting: 64 GSM8K problems the agent never saw, 8k tokens, one sample each, paired. **Strict** accuracy counts only an answer given after `</think>`.
 
-The only enumeration that does not loop, the chemical elements 1–60, does not repeat (0.07) but is still cut. This matches the "doom looping" described by Lazaridis et al.: non-convergent self-correction on facts the model cannot recall.
-
-**Phase 1 target:** remove the enumeration loop in Qwen3.5-2B without hurting the 15 prompts that already end cleanly or GSM8K accuracy. The full prompt and generated token ids are saved in `results/texts_*.jsonl`. The direction can be estimated from these loop and clean contexts without generating again.
-
-## Phase 1: a loop direction exists, but removing it does not fix the failure
-
-**Direction.** `scripts/capture_directions.py` re-reads the saved generations, teacher-forced. It takes positions before the loop onset ("productive") and inside the loop, in the same 19 looping samples, and calls the difference of the MLP-output means `d`. The data is split by sample; on the held-out half, the projection on `d` separates loop from productive positions with AUC 0.98–0.999 in layers 8–15. `d` also has cosine 0.90–0.95 with mean(loop) − mean(clean samples). Caveat: loop positions are always later in the text, so part of the separation may be context length.
-
-**Edit.** `scripts/apply_edit.py`, layers 12 and 13. In each layer, the 64 neurons that push most along `d` in loop positions get `w' = w − 6 (u·w) u`, the published recipe. The control is a random direction on the same columns, rescaled to the same ‖ΔW‖.
-
-**Screen** on unseen prompts (`data/open_holdout.jsonl`), 6,144 tokens, one sample per prompt:
-
-| | Base | Edited | Random control |
-|---|---|---|---|
-| 12 enumerations: verbatim loops | 11 | 6 | 8 |
-| 12 enumerations: mean repetition | 0.72 | 0.46 | 0.62 |
-| 12 enumerations: **thinking closed** | **1** | **2** | **2** |
-| 8 clean prompts: closed / mean tokens | 8 / 2,360 | 8 / 2,917 | 7 / 2,930 |
-
-**Reading.** The edit changes the form of the failure, not the failure itself. Edited answers stop repeating verbatim, but they keep self-correcting on facts the model does not know ("*Wait, I am hallucinating dates. I need to stop and get the actual facts.*") and still hit the budget. This is the "doom looping" of Lazaridis et al., and it fits the source paper's limit: an edit can remove an obstacle, not add knowledge. With one sample per prompt, edited and random (6 vs 8 loops) are not distinguishable.
-
-**Consequences.**
-- The repetition score is a good loop *detector* but a poor *success* criterion. The success criterion is now "closes thinking and answers".
-- Next target: amplify a "conclude" direction (positions just before `</think>` in answers that end, against positions in answers that spiral), rather than remove the loop direction. Use several samples per prompt so the control is interpretable.
-
-### Second try: amplify a "conclude" direction
-
-`scripts/capture_conclude.py` contrasts the 64 tokens before `</think>` in answers that end with positions inside loops. The resulting direction `c` separates the two sets on held-out samples (AUC 0.95–0.97 in layers 4–22). In layers 9–15 it is almost the opposite of the loop direction (cos(c, −u) = 0.90–0.92), so "conclude" and "do not loop" are nearly one axis there. It is more distinct in late layers (0.75 in layers 20–21).
-
-Edit: `apply_edit.py --mode amplify`, `w' = w + 3 (c·w) c` on the 64 neurons per layer that push most along `c` when concluding. Screen on `data/open_holdout.jsonl`, 2 samples per prompt, 6,144 tokens:
-
-| | Base | Conclude L20–21 | Conclude L16–17 | Random L20–21 |
+| | strict accuracy | rescued / regressed | loops | edited weights |
 |---|---|---|---|---|
-| 24 enumeration samples: **thinking closed** | **2** | **2** | **3** | **1** |
-| 24 enumeration samples: verbatim loops | 17 | 13 | 17 | 20 |
-| 16 clean samples: closed | 16 | 14 | 13 | 15 |
-
-**Reading.** No edit makes the 2B conclude on enumerations, and the clean prompts get slightly worse. Two attempts point the same way: in Qwen3.5-2B, enumeration doom-looping comes from facts the model cannot recall, not from a single-direction defect, and a rank-one weight edit does not fix it.
-
-**Next.** Go back to a case with known ground truth. The 0.8B math loop has a published edit, so phase 2 asks: can a coding agent on a Mac rediscover it, with a harness that only gives it weights, a forward-pass budget and dev and holdout sets?
-
-## Phase 2: can a coding agent rediscover a weight edit on a Mac?
-
-**Harness** (`harness/`), modeled on the source paper's rules:
-- **The editor** is Claude Code (Opus 5.5) run headless by `run_agent.sh`. It is never told what the published edit is.
-- **What it can use:**
-  - a numpy-only kernel (`kernel.py`, in a venv without MLX), to read weights and save edits;
-  - `save_edit`, which checks the rules: no embedding, output head or final-norm edits, no whole-tensor scaling;
-  - a budgeted forward-pass tool (`forward.py`): `generate` answers 32 problems at 8,192 tokens, base, edited or paired; `read` is a teacher-forced activation read;
-  - 1,500 GSM8K dev problems.
-- **What it cannot reach:** the holdout ids stay outside its workspace. Reads of the repo, the HF cache and `~/.claude` are denied, and its tools are limited to `./kpy`, `./fwd` and file tools inside the workspace.
-- **Final judgment:** `finalize.py` evaluates on 64 holdout problems with a normal and a strict grade. Strict counts only an answer given after `</think>`.
-
-**Run 1:** 12 passes, 91 turns, 3 h 15, about $5.2 at list price.
-
-The agent's own path:
-1. Ablating 48 loop-selective neurons did nothing. Its conclusion: the neurons are loop *detectors*, not drivers.
-2. It rewired six of these detectors (layers 20–23) to also write a direction that raises the `</think>` logit: an "if looping, close thinking" circuit.
-3. A dose sweep found runaways at S ≥ 3–4. It also tried and dropped lexical tricks ("Wait" down, `\boxed` up). The `\boxed` idea exploited a grader loophole: a `\boxed{}` inside unfinished thinking counted.
-4. S = 2 won on its own holdout: 2/32 → 9/32, with the random-direction control at 3 vs 4.
-
-Its report is in the workspace; the pilot report is in `run1.pilot_final_report.md`.
-
-**Independent check** on 64 problems it never saw, 8,192 tokens, one sample each, paired:
-
-| | Base | Agent edit (6 columns, L20–23) | Published edit (128 columns, L15/19) |
-|---|---|---|---|
-| Accuracy | 18.8 % | 25.0 % | 28.1 % |
-| **Strict accuracy** (answer after `</think>`) | 15.6 % | 23.4 % | **28.1 %** |
-| Strict rescued / regressed (sign test) | | 9 / 4 (p = 0.27) | 12 / 4 (p = 0.08) |
-| Thinking closed | 15.6 % | 85.9 % | 40.6 % |
-| Verbatim loops | 82.8 % | 60.9 % | **9.4 %** |
+| base | 15.6 % | | 83 % | |
+| agent edit | 23.4 % | 9 / 4 (p = 0.27) | 61 % | 6 columns, layers 20–23 |
+| published edit | **28.1 %** | 12 / 4 (p = 0.08) | **9 %** | 128 columns, layers 15/19 |
 
 **Reading.**
-- **The agent found a working but weaker mechanism.** Its edit is a different solution, not a rediscovery: the edited directions have |cos| 0.03–0.04 with the published one. Both edits point the right way, but with 64 problems neither gain is significant, and the agent's (+7.8 points strict) is smaller than the published one's (+12.5).
-- **Its "closed" rate is inflated by runaways.** 33 of its 55 closed answers repeat `</think>` in a loop ("…drive to town and`</think>` Let's re-evaluate…"). This is the failure it saw at higher doses, and it is more frequent on unseen problems than its estimate (7/32). The published edit removes the loop itself (9 % loops), whereas the agent's edit gives the model an exit it overuses.
-- **Budget matters.** Astra had 50 passes at 32k tokens; this run had 12 at 8k. The agent spent 6 of its 12 passes learning the dose and the runaway failure.
+- **The two edits are different solutions, not one rediscovered.** The agent's directions are orthogonal to the published one (|cos| 0.03–0.04). The published edit removes the loop. The agent's edit gives the model an exit, and the model overuses it: 33 of its 55 "closed" answers keep repeating `</think>`.
+- **The budget is part of the result.** Astra had 50 passes at 32k tokens; this agent had 12 at 8k, and spent half of them learning the dose.
 
-**Next.**
-- Rerun with a larger budget, two samples per problem in screens, and a runaway check in `fwd` (count of `</think>`).
-- Then point the harness at a fresh target with no known answer.
+## 5. The negative result: Qwen3.5-2B
 
-## Layout
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/fig5_2b_negative-dark.png">
+  <img alt="Share of 2B enumeration samples that close thinking under each edit, all within noise of base" src="figures/fig5_2b_negative-light.png">
+</picture>
 
-```
-scripts/diff_weights.py   diff two checkpoints, test the rank-one projection hypothesis
-scripts/speed_test.py     one thinking answer: speed, peak memory, termination
-scripts/loop_eval.py      batched loop rate, accuracy and length on GSM8K-style problems
-data/gsm8k_train.jsonl    practice problems (GSM8K train, MIT licence)
-results/                  summaries and per-sample results
-models/                   downloaded checkpoints (git-ignored)
-```
+**The 2B fails differently from the 0.8B.** On GSM8K it loops only 19 % of the time; its failure there is long thinking. But it loops on 13 of 14 prompts like "name all 88 constellations" or "list every French département", in English and in French.
+
+Two hand-built edits were tested on unseen prompts, each against a same-size random control:
+- **Remove the loop direction** (AUC 0.98–0.999 in layers 8–15). The verbatim repeats turn into non-verbatim self-correction (*"Wait, I am hallucinating dates. I need to stop and get the actual facts."*).
+- **Amplify a "conclude" direction.** In mid layers it is almost the negative of the loop direction (cos 0.90–0.92).
+
+Neither changes how often the model finishes. **This kind of loop is a knowledge failure, not a single-direction defect**, which matches the limit the source paper reports on Gemma 3 270M.
+
+---
 
 ## Reproduce
 
@@ -187,7 +115,40 @@ models/                   downloaded checkpoints (git-ignored)
 uv sync
 uv run hf download Qwen/Qwen3.5-0.8B --revision 2fc06364715b967f1860aea9cf38778875588b17 --local-dir models/qwen3.5-0.8B-base
 uv run hf download RikiyaT/Qwen3.5-0.8B-weight-space-programming --local-dir models/qwen3.5-0.8B-wsp
-uv run python scripts/diff_weights.py models/qwen3.5-0.8B-base models/qwen3.5-0.8B-wsp
-uv run python scripts/loop_eval.py models/qwen3.5-0.8B-base --n 32 --max-tokens 16384 --tag base_n32_t16k
-uv run python scripts/loop_eval.py models/qwen3.5-0.8B-wsp  --n 32 --max-tokens 16384 --tag wsp_n32_t16k
+
+uv run python scripts/diff_weights.py models/qwen3.5-0.8B-base models/qwen3.5-0.8B-wsp        # section 1
+uv run python scripts/loop_eval.py models/qwen3.5-0.8B-wsp --n 32 --max-tokens 16384 --tag wsp  # section 2 (resumable)
+
+uv run python harness/setup_workspace.py ~/ws-runs/run2 --budget 12 --max-tokens 8192         # section 3
+harness/run_agent.sh ~/ws-runs/run2 6 15
+uv run python harness/finalize.py ~/ws-runs/run2 --max-tokens 8192                             # section 4
+
+uv run python scripts/make_figures.py                                                          # figures
 ```
+
+A 32-problem pass at 8k tokens takes about 9 minutes on an M5 with batched MLX generation. Wrap long runs in `caffeinate -dims` and keep the lid open.
+
+<details>
+<summary><b>Repository layout</b></summary>
+
+```
+scripts/   diff_weights, loop_eval (resumable, strict + lenient grading), capture_directions,
+           capture_conclude, apply_edit (remove | amplify | random control), make_figures
+harness/   kernel (numpy-only), forward (budgeted passes), setup_workspace, run_agent.sh, finalize, task.md
+runs/run1/ the agent's reports, notes, scripts, pass summaries and transcript
+results/   every evaluation, per-sample rows and saved token ids
+data/      GSM8K train (MIT), open and holdout prompt sets
+docs/lab-notes.md   the full chronological record, with every table
+```
+
+</details>
+
+## Limits
+
+- **Small samples.** 32–64 problems and one sample per problem, so effects under about 10 points are within noise. Intervals are shown everywhere.
+- **Short budgets.** The source paper evaluates at 32k tokens; most numbers here are at 8k or 16k.
+- **One agent run.** The agent's path depends on its budget and its sampling. Run 2 will raise the budget, screen with two samples per problem and add a runaway counter to `./fwd`.
+
+## License
+
+MIT. Builds on the public logs and edited model of Takehi et al. ([logs](https://github.com/RikiyaT/lm_understand-logs), [model](https://huggingface.co/RikiyaT/Qwen3.5-0.8B-weight-space-programming)) and on Qwen3.5 (Apache-2.0).
