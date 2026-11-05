@@ -22,7 +22,7 @@ All of it is in this folder, which is your whole world. Do not read or write fil
      - `texts_<model>.jsonl`: prompt and generated token ids, for reads.
    - `./fwd read --texts passes/fwd_<k>/texts_<model>.jsonl --layers A-B [--positions tail|spread] [--per 48]`: a teacher-forced read of up to 32 saved texts **with your current edit applied**. For each layer in A..B it records, at sampled generated positions, the MLP neuron activations (`acts_<l>`, the input of `down_proj`, width 3584) and what the MLP writes to the residual stream (`outs_<l>`, width 1024). Output: `passes/fwd_<k>/read.npz` with `sample_index` and `position` for every recorded row. `tail` samples the last 1,024 generated tokens, `spread` the whole generation.
 
-   A generation pass can take 10–30 minutes. Each call, generate or read, costs one pass, at any size.
+   A generation pass can take 10–30 minutes; the call blocks until it finishes, so give it a long timeout. Each call, generate or read, costs one pass, at any size.
 3. **Practice problems: `dev.jsonl`**, 1,500 GSM8K training problems with `id`, `problem`, `answer`, `solution`. You will be judged on other problems you never see.
 4. **A notebook: `notes.md`.** Keep it current with what you tried, what you measured and what you believe. Your conversation may be restarted, and you will then continue from your notes and the files in this folder.
 

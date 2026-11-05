@@ -129,6 +129,47 @@ Edit: `apply_edit.py --mode amplify`, `w' = w + 3 (c·w) c` on the 64 neurons pe
 
 **Next.** Go back to a case with known ground truth. The 0.8B math loop has a published edit, so phase 2 asks: can a coding agent on a Mac rediscover it, with a harness that only gives it weights, a forward-pass budget and dev and holdout sets?
 
+## Phase 2: can a coding agent rediscover a weight edit on a Mac?
+
+**Harness** (`harness/`), modeled on the source paper's rules:
+- **The editor** is Claude Code (Opus 5.5) run headless by `run_agent.sh`. It is never told what the published edit is.
+- **What it can use:**
+  - a numpy-only kernel (`kernel.py`, in a venv without MLX), to read weights and save edits;
+  - `save_edit`, which checks the rules: no embedding, output head or final-norm edits, no whole-tensor scaling;
+  - a budgeted forward-pass tool (`forward.py`): `generate` answers 32 problems at 8,192 tokens, base, edited or paired; `read` is a teacher-forced activation read;
+  - 1,500 GSM8K dev problems.
+- **What it cannot reach:** the holdout ids stay outside its workspace. Reads of the repo, the HF cache and `~/.claude` are denied, and its tools are limited to `./kpy`, `./fwd` and file tools inside the workspace.
+- **Final judgment:** `finalize.py` evaluates on 64 holdout problems with a normal and a strict grade. Strict counts only an answer given after `</think>`.
+
+**Run 1:** 12 passes, 91 turns, 3 h 15, about $5.2 at list price.
+
+The agent's own path:
+1. Ablating 48 loop-selective neurons did nothing. Its conclusion: the neurons are loop *detectors*, not drivers.
+2. It rewired six of these detectors (layers 20–23) to also write a direction that raises the `</think>` logit: an "if looping, close thinking" circuit.
+3. A dose sweep found runaways at S ≥ 3–4. It also tried and dropped lexical tricks ("Wait" down, `\boxed` up). The `\boxed` idea exploited a grader loophole: a `\boxed{}` inside unfinished thinking counted.
+4. S = 2 won on its own holdout: 2/32 → 9/32, with the random-direction control at 3 vs 4.
+
+Its report is in the workspace; the pilot report is in `run1.pilot_final_report.md`.
+
+**Independent check** on 64 problems it never saw, 8,192 tokens, one sample each, paired:
+
+| | Base | Agent edit (6 columns, L20–23) | Published edit (128 columns, L15/19) |
+|---|---|---|---|
+| Accuracy | 18.8 % | 25.0 % | 28.1 % |
+| **Strict accuracy** (answer after `</think>`) | 15.6 % | 23.4 % | **28.1 %** |
+| Strict rescued / regressed (sign test) | | 9 / 4 (p = 0.27) | 12 / 4 (p = 0.08) |
+| Thinking closed | 15.6 % | 85.9 % | 40.6 % |
+| Verbatim loops | 82.8 % | 60.9 % | **9.4 %** |
+
+**Reading.**
+- **The agent found a working but weaker mechanism.** Its edit is a different solution, not a rediscovery: the edited directions have |cos| 0.03–0.04 with the published one. Both edits point the right way, but with 64 problems neither gain is significant, and the agent's (+7.8 points strict) is smaller than the published one's (+12.5).
+- **Its "closed" rate is inflated by runaways.** 33 of its 55 closed answers repeat `</think>` in a loop ("…drive to town and`</think>` Let's re-evaluate…"). This is the failure it saw at higher doses, and it is more frequent on unseen problems than its estimate (7/32). The published edit removes the loop itself (9 % loops), whereas the agent's edit gives the model an exit it overuses.
+- **Budget matters.** Astra had 50 passes at 32k tokens; this run had 12 at 8k. The agent spent 6 of its 12 passes learning the dose and the runaway failure.
+
+**Next.**
+- Rerun with a larger budget, two samples per problem in screens, and a runaway check in `fwd` (count of `</think>`).
+- Then point the harness at a fresh target with no known answer.
+
 ## Layout
 
 ```

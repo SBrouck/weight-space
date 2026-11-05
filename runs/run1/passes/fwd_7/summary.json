@@ -1,0 +1,36 @@
+{
+  "pass": 7,
+  "max_tokens": 8192,
+  "edit": [
+    "model.language_model.layers.14.mlp.down_proj.weight.npy",
+    "model.language_model.layers.15.mlp.down_proj.weight.npy",
+    "model.language_model.layers.16.mlp.down_proj.weight.npy",
+    "model.language_model.layers.19.mlp.down_proj.weight.npy",
+    "model.language_model.layers.20.mlp.down_proj.weight.npy",
+    "model.language_model.layers.21.mlp.down_proj.weight.npy",
+    "model.language_model.layers.22.mlp.down_proj.weight.npy",
+    "model.language_model.layers.23.mlp.down_proj.weight.npy"
+  ],
+  "base": {
+    "n": 32,
+    "accuracy": 0.1875,
+    "closed": 0.15625,
+    "cut": 0.84375,
+    "loop": 0.78125,
+    "mean_tokens": 7244,
+    "seconds": 484
+  },
+  "edited": {
+    "n": 32,
+    "accuracy": 0.09375,
+    "closed": 1.0,
+    "cut": 0.0,
+    "loop": 0.8125,
+    "mean_tokens": 7242,
+    "seconds": 485
+  },
+  "paired": {
+    "rescued": 1,
+    "regressed": 4
+  }
+}

@@ -129,6 +129,9 @@ def main() -> None:
                     "repetition": round(repetition(ids), 3),
                     "pred": pred, "answer": p.get("answer"),
                     "correct": same_answer(pred, p["answer"]) if "answer" in p else None,
+                    # Strict: only an answer given after </think> counts (a \boxed{} inside
+                    # unfinished thinking does not).
+                    "strict_correct": (closed and same_answer(pred, p["answer"])) if "answer" in p else None,
                     "seconds": round(per_sample, 2),
                     "tail": text[-1500:],
                 }
@@ -143,6 +146,8 @@ def main() -> None:
     summary = {
         "tag": args.tag, "model": args.model, "n": n, "max_tokens": args.max_tokens,
         "accuracy": sum(r["correct"] for r in graded) / len(graded) if graded else None,
+        "strict_accuracy": (sum(bool(r.get("strict_correct")) for r in graded) / len(graded)
+                            if graded and all("strict_correct" in r for r in graded) else None),
         "cut_rate": sum(r["cut"] for r in rows) / n,
         "closed_rate": sum(r["closed_thinking"] for r in rows) / n,
         "loop_rate": sum(r["repetition"] >= 0.5 for r in rows) / n,

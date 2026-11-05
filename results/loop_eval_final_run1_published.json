@@ -1,0 +1,16 @@
+{
+  "tag": "final_run1_published",
+  "model": "models/qwen3.5-0.8B-wsp",
+  "n": 64,
+  "max_tokens": 8192,
+  "accuracy": 0.28125,
+  "strict_accuracy": 0.28125,
+  "cut_rate": 0.59375,
+  "closed_rate": 0.40625,
+  "loop_rate": 0.09375,
+  "mean_repetition": 0.128,
+  "mean_tokens": 6831.234375,
+  "total_tokens": 437199,
+  "seconds": 894.7,
+  "throughput_tok_s": 488.6
+}

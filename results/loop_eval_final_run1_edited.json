@@ -1,0 +1,16 @@
+{
+  "tag": "final_run1_edited",
+  "model": "/Users/sachabrouck/ws-runs/run1/.edited_ckpt",
+  "n": 64,
+  "max_tokens": 8192,
+  "accuracy": 0.25,
+  "strict_accuracy": 0.234375,
+  "cut_rate": 0.140625,
+  "closed_rate": 0.859375,
+  "loop_rate": 0.609375,
+  "mean_repetition": 0.55753125,
+  "mean_tokens": 7396.625,
+  "total_tokens": 473384,
+  "seconds": 968.0,
+  "throughput_tok_s": 489.0
+}

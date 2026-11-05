@@ -17,6 +17,9 @@ cd "$WS"
 ALLOWED='Bash(./kpy:*) Bash(./fwd:*) Read Write Edit Glob Grep'
 DENIED='WebFetch WebSearch Agent Bash(cd:*) Read(//Users/sachabrouck/ai-engineering/**) Read(//Users/sachabrouck/.cache/**) Read(//Users/sachabrouck/.claude/**)'
 
+# A generation pass takes 10-30 minutes: let the agent's Bash calls run up to 45 minutes.
+export BASH_DEFAULT_TIMEOUT_MS=2700000 BASH_MAX_TIMEOUT_MS=2700000
+
 left() { ./fwd status | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['budget']-d['used'])"; }
 
 round=1
@@ -28,7 +31,7 @@ Start now. Begin by reading notes.md and running ./fwd status."
     RESUME="--session-id $SESSION"
   else
     [ "$(left)" -gt 0 ] || { echo "budget spent"; break; }
-    PROMPT="Continue the task in task.md from where you stopped. Re-read notes.md and run ./fwd status first. $(left) passes are left. When they are all spent, leave your best edit in edit/ and write final_report.md."
+    PROMPT="Continue the task in task.md from where you stopped. Re-read notes.md and run ./fwd status first. $(left) passes are left (the budget may have been raised since your last report: if so, keep working and rewrite final_report.md at the end). When they are all spent, leave your best edit in edit/ and write final_report.md."
     RESUME="--resume $SESSION"
   fi
   echo "== round $round, passes left: $(left)"

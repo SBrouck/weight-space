@@ -1,0 +1,32 @@
+{
+  "pass": 12,
+  "max_tokens": 8192,
+  "edit": [
+    "model.language_model.layers.20.mlp.down_proj.weight.npy",
+    "model.language_model.layers.21.mlp.down_proj.weight.npy",
+    "model.language_model.layers.22.mlp.down_proj.weight.npy",
+    "model.language_model.layers.23.mlp.down_proj.weight.npy"
+  ],
+  "base": {
+    "n": 32,
+    "accuracy": 0.125,
+    "closed": 0.1875,
+    "cut": 0.8125,
+    "loop": 0.8125,
+    "mean_tokens": 6876,
+    "seconds": 476
+  },
+  "edited": {
+    "n": 32,
+    "accuracy": 0.09375,
+    "closed": 0.125,
+    "cut": 0.875,
+    "loop": 0.84375,
+    "mean_tokens": 7378,
+    "seconds": 493
+  },
+  "paired": {
+    "rescued": 1,
+    "regressed": 2
+  }
+}

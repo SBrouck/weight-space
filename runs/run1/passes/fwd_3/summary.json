@@ -1,0 +1,41 @@
+{
+  "pass": 3,
+  "max_tokens": 8192,
+  "edit": [
+    "model.language_model.layers.10.mlp.down_proj.weight.npy",
+    "model.language_model.layers.11.mlp.down_proj.weight.npy",
+    "model.language_model.layers.12.mlp.down_proj.weight.npy",
+    "model.language_model.layers.13.mlp.down_proj.weight.npy",
+    "model.language_model.layers.14.mlp.down_proj.weight.npy",
+    "model.language_model.layers.15.mlp.down_proj.weight.npy",
+    "model.language_model.layers.17.mlp.down_proj.weight.npy",
+    "model.language_model.layers.18.mlp.down_proj.weight.npy",
+    "model.language_model.layers.20.mlp.down_proj.weight.npy",
+    "model.language_model.layers.22.mlp.down_proj.weight.npy",
+    "model.language_model.layers.23.mlp.down_proj.weight.npy",
+    "model.language_model.layers.8.mlp.down_proj.weight.npy",
+    "model.language_model.layers.9.mlp.down_proj.weight.npy"
+  ],
+  "base": {
+    "n": 32,
+    "accuracy": 0.125,
+    "closed": 0.0625,
+    "cut": 0.9375,
+    "loop": 0.90625,
+    "mean_tokens": 7854,
+    "seconds": 539
+  },
+  "edited": {
+    "n": 32,
+    "accuracy": 0.0625,
+    "closed": 0.0625,
+    "cut": 0.9375,
+    "loop": 0.90625,
+    "mean_tokens": 7758,
+    "seconds": 517
+  },
+  "paired": {
+    "rescued": 2,
+    "regressed": 4
+  }
+}

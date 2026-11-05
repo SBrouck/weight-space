@@ -1,0 +1,16 @@
+{
+  "tag": "final_run1_base",
+  "model": "/Users/sachabrouck/ai-engineering/experiments/weight-space/models/qwen3.5-0.8B-base",
+  "n": 64,
+  "max_tokens": 8192,
+  "accuracy": 0.1875,
+  "strict_accuracy": 0.15625,
+  "cut_rate": 0.84375,
+  "closed_rate": 0.15625,
+  "loop_rate": 0.828125,
+  "mean_repetition": 0.746421875,
+  "mean_tokens": 7254.109375,
+  "total_tokens": 464263,
+  "seconds": 1208.0,
+  "throughput_tok_s": 384.3
+}

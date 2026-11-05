@@ -1,0 +1,73 @@
+{
+  "run": "run1",
+  "tensors": {
+    "model.language_model.layers.20.mlp.down_proj.weight": {
+      "changed_entries": 1024,
+      "relative_change": 0.02294083684682846,
+      "rank1_share": 1.0,
+      "abs_cos_with_published": {
+        "model_language_model_layers_15_mlp_down_proj_weight": 0.034,
+        "model_language_model_layers_19_mlp_down_proj_weight": 0.04
+      }
+    },
+    "model.language_model.layers.21.mlp.down_proj.weight": {
+      "changed_entries": 1024,
+      "relative_change": 0.027443422004580498,
+      "rank1_share": 1.0,
+      "abs_cos_with_published": {
+        "model_language_model_layers_15_mlp_down_proj_weight": 0.034,
+        "model_language_model_layers_19_mlp_down_proj_weight": 0.04
+      }
+    },
+    "model.language_model.layers.22.mlp.down_proj.weight": {
+      "changed_entries": 2048,
+      "relative_change": 0.029967837035655975,
+      "rank1_share": 1.0,
+      "abs_cos_with_published": {
+        "model_language_model_layers_15_mlp_down_proj_weight": 0.034,
+        "model_language_model_layers_19_mlp_down_proj_weight": 0.04
+      }
+    },
+    "model.language_model.layers.23.mlp.down_proj.weight": {
+      "changed_entries": 2048,
+      "relative_change": 0.02912885509431362,
+      "rank1_share": 1.0,
+      "abs_cos_with_published": {
+        "model_language_model_layers_15_mlp_down_proj_weight": 0.034,
+        "model_language_model_layers_19_mlp_down_proj_weight": 0.04
+      }
+    }
+  },
+  "base": {
+    "tag": "final_run1_base",
+    "model": "/Users/sachabrouck/ai-engineering/experiments/weight-space/models/qwen3.5-0.8B-base",
+    "n": 64,
+    "max_tokens": 8192,
+    "accuracy": 0.1875,
+    "strict_accuracy": 0.15625,
+    "cut_rate": 0.84375,
+    "closed_rate": 0.15625,
+    "loop_rate": 0.828125,
+    "mean_repetition": 0.746421875,
+    "mean_tokens": 7254.109375,
+    "total_tokens": 464263,
+    "seconds": 1208.0,
+    "throughput_tok_s": 384.3
+  },
+  "edited": {
+    "tag": "final_run1_edited",
+    "model": "/Users/sachabrouck/ws-runs/run1/.edited_ckpt",
+    "n": 64,
+    "max_tokens": 8192,
+    "accuracy": 0.25,
+    "strict_accuracy": 0.234375,
+    "cut_rate": 0.140625,
+    "closed_rate": 0.859375,
+    "loop_rate": 0.609375,
+    "mean_repetition": 0.55753125,
+    "mean_tokens": 7396.625,
+    "total_tokens": 473384,
+    "seconds": 968.0,
+    "throughput_tok_s": 489.0
+  }
+}
