@@ -1,6 +1,10 @@
-models/
+models
 .venv/
 __pycache__/
+.pytest_cache/
 *.npz
+!results/dirs_2b.npz
+!results/conclude_2b.npz
+.env
 .DS_Store
 harness/kernel_env/

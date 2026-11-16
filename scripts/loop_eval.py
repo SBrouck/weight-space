@@ -5,6 +5,8 @@ Accuracy compares the last \\boxed{} answer with the reference (numeric when bot
 A sample counts as a loop when its repetition score (see `repetition`) is at least 0.5.
 Problems without an "answer" field (open prompts) get no math suffix and no accuracy.
 Results are appended per batch, so rerunning the same command resumes after an interruption.
+Sampling is seeded with --seed (the committed results/ were generated before the seed was added,
+so a rerun matches them in distribution, not token for token).
 
 Usage: uv run python scripts/loop_eval.py models/qwen3.5-0.8B-base --n 64 --max-tokens 4096 --tag base
 """
@@ -14,55 +16,24 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import time
 
+import mlx.core as mx
 from mlx_lm import load
 from mlx_lm.generate import batch_generate
 from mlx_lm.sample_utils import make_logits_processors, make_sampler
 
+from grading import last_boxed, repetition, same_answer
+
 SUFFIX = " Please reason step by step, and put your final answer within \\boxed{}."
 
 
-def last_boxed(text: str) -> str | None:
-    """Return the content of the last \\boxed{...}, handling nested braces."""
-    start = text.rfind("\\boxed{")
-    if start < 0:
-        return None
-    i, depth = start + len("\\boxed{"), 1
-    for j in range(i, len(text)):
-        depth += {"{": 1, "}": -1}.get(text[j], 0)
-        if depth == 0:
-            return text[i:j].strip()
-    return None
-
-
-def same_answer(pred: str | None, ref: str) -> bool:
-    """Compare answers numerically when possible, otherwise as normalised strings."""
-    if pred is None:
-        return False
-    norm = lambda s: re.sub(r"[\s$,]|\\!|\\text\{[^}]*\}", "", s)
-    p, r = norm(pred), norm(ref)
-    try:
-        return abs(float(p) - float(r)) < 1e-6
-    except ValueError:
-        return p == r
-
-
-def repetition(ids: list[int], window: int = 1024, n: int = 16) -> float:
-    """Share of n-grams in the last `window` tokens that already occurred earlier in that window.
-
-    Near 0 for productive text, close to 1 for a verbatim loop. Works on cut samples too,
-    so it separates a loop from a long but progressing chain of thought.
-    """
-    tail = ids[-window:]
-    seen, repeats, total = set(), 0, 0
-    for i in range(len(tail) - n + 1):
-        gram = tuple(tail[i : i + n])
-        repeats += gram in seen
-        seen.add(gram)
-        total += 1
-    return repeats / total if total else 0.0
+def display_path(path: str) -> str:
+    """Path relative to the working directory when inside it, with the home directory as ~ otherwise."""
+    path = os.path.abspath(path)
+    if path.startswith(os.getcwd() + os.sep):
+        return os.path.relpath(path)
+    return path.replace(os.path.expanduser("~"), "~", 1)
 
 
 def main() -> None:
@@ -75,7 +46,9 @@ def main() -> None:
     parser.add_argument("--batch", type=int, default=32)
     parser.add_argument("--samples", type=int, default=1, help="samples per problem")
     parser.add_argument("--tag", required=True)
+    parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
+    mx.random.seed(args.seed)
 
     with open(args.data, encoding="utf-8") as f:
         problems = [json.loads(line) for line in f][args.offset : args.offset + args.n]
@@ -144,7 +117,7 @@ def main() -> None:
     n = len(rows)
     seconds = sum(r.get("seconds", 0) for r in rows)
     summary = {
-        "tag": args.tag, "model": args.model, "n": n, "max_tokens": args.max_tokens,
+        "tag": args.tag, "model": display_path(args.model), "n": n, "max_tokens": args.max_tokens,
         "accuracy": sum(r["correct"] for r in graded) / len(graded) if graded else None,
         "strict_accuracy": (sum(bool(r.get("strict_correct")) for r in graded) / len(graded)
                             if graded and all("strict_correct" in r for r in graded) else None),

@@ -5,6 +5,9 @@ For 2-D tensors, test the hypothesis that the edit removes one direction u from 
 subset of columns: w_j' = w_j - c_j * u. If so, the delta restricted to the changed
 columns is rank one, and c_j should track the projection u . w_j.
 
+Writes results/edit_anatomy.json (summary statistics and the per-column norm of the delta, used by
+fig1) and results/wsp_directions.npz (the recovered directions, used by harness/finalize.py).
+
 Usage: uv run python scripts/diff_weights.py models/base models/edited [--prefix model.language_model.]
 """
 
@@ -12,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import json
 import os
 
 import mlx.core as mx
@@ -31,16 +35,19 @@ def to_np(a: mx.array) -> np.ndarray:
     return np.array(a.astype(mx.float32))
 
 
-def analyse_matrix(name: str, base: np.ndarray, edited: np.ndarray) -> np.ndarray | None:
-    """Print the structure of a 2-D edit and return the recovered unit direction u."""
+def analyse_matrix(name: str, base: np.ndarray, edited: np.ndarray) -> tuple[np.ndarray | None, dict]:
+    """Print the structure of a 2-D edit; return the recovered unit direction u and its statistics."""
     delta = edited - base
     cols = np.flatnonzero(np.any(delta != 0, axis=0))
     rows = np.flatnonzero(np.any(delta != 0, axis=1))
     print(f"\n{name}  shape={base.shape}")
     print(f"  changed entries={np.count_nonzero(delta)}  rows={rows.size}  cols={cols.size}")
-    print(f"  relative change ||dW||/||W|| = {np.linalg.norm(delta) / np.linalg.norm(base):.4f}")
+    rel = float(np.linalg.norm(delta) / np.linalg.norm(base))
+    print(f"  relative change ||dW||/||W|| = {rel:.4f}")
+    stats = {"shape": list(base.shape), "changed_entries": int(np.count_nonzero(delta)),
+             "changed_rows": int(rows.size), "changed_cols": int(cols.size), "relative_change": rel}
     if cols.size == 0:
-        return None
+        return None, stats
 
     sub = delta[:, cols]
     s = np.linalg.svd(sub, compute_uv=False)
@@ -57,7 +64,13 @@ def analyse_matrix(name: str, base: np.ndarray, edited: np.ndarray) -> np.ndarra
     print(f"  removal strength -coeff_j/(u.w_j): median {np.nanmedian(ratio):.3f}  "
           f"p10 {np.nanpercentile(ratio, 10):.3f}  p90 {np.nanpercentile(ratio, 90):.3f}")
     print(f"  first changed columns (neurons): {cols[:16].tolist()}{' ...' if cols.size > 16 else ''}")
-    return u
+    stats.update({
+        "rank1_share": float(s[0] ** 2 / np.sum(s ** 2)), "corr_coeff_projection": float(corr),
+        "k_median": float(np.nanmedian(ratio)), "k_p10": float(np.nanpercentile(ratio, 10)),
+        "k_p90": float(np.nanpercentile(ratio, 90)), "cols": cols.tolist(),
+        "col_delta_norm": np.linalg.norm(sub, axis=0).round(6).tolist(),
+    })
+    return u, stats
 
 
 def main() -> None:
@@ -65,6 +78,7 @@ def main() -> None:
     parser.add_argument("base")
     parser.add_argument("edited")
     parser.add_argument("--prefix", default="model.language_model.")
+    parser.add_argument("--out", default="results/edit_anatomy.json")
     args = parser.parse_args()
 
     base, edited = load_all(args.base), load_all(args.edited)
@@ -73,6 +87,7 @@ def main() -> None:
     print(f"{len(keys)} tensors under '{args.prefix}', {len(missing)} missing in edited")
 
     directions: dict[str, np.ndarray] = {}
+    tensors: dict[str, dict] = {}
     changed = []
     for k in keys:
         if k in missing:
@@ -85,17 +100,35 @@ def main() -> None:
     for k in changed:
         a, b = to_np(base[k]), to_np(edited[k])
         if a.ndim == 2:
-            u = analyse_matrix(k, a, b)
+            u, tensors[k] = analyse_matrix(k, a, b)
             if u is not None:
                 directions[k] = u
         else:
-            print(f"\n{k}: {np.count_nonzero(a != b)} entries changed (not 2-D)")
+            tensors[k] = {"shape": list(a.shape), "changed_entries": int(np.count_nonzero(a != b))}
+            print(f"\n{k}: {tensors[k]['changed_entries']} entries changed (not 2-D)")
 
     names = list(directions)
+    cosines = []
     for i in range(len(names)):
         for j in range(i + 1, len(names)):
             cos = abs(float(directions[names[i]] @ directions[names[j]]))
+            cosines.append({"a": names[i], "b": names[j], "abs_cos": cos})
             print(f"\n|cos(u)| between\n  {names[i]}\n  {names[j]}\n  = {cos:.4f}")
+
+    total = int(sum(base[k].size for k in keys))
+    edited_entries = sum(t["changed_entries"] for t in tensors.values())
+    anatomy = {
+        "base": os.path.basename(os.path.normpath(args.base)),
+        "edited": os.path.basename(os.path.normpath(args.edited)),
+        "prefix": args.prefix, "n_tensors": len(keys), "n_changed_tensors": len(changed),
+        "n_params": total, "n_changed_entries": edited_entries,
+        "changed_share": edited_entries / total, "tensors": tensors, "direction_cosines": cosines,
+    }
+    os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
+    with open(args.out, "w") as f:
+        json.dump(anatomy, f, indent=1)
+    print(f"\nchanged entries: {edited_entries} of {total} ({100 * edited_entries / total:.4f} %)")
+    print(f"saved {args.out}")
 
     os.makedirs("results", exist_ok=True)
     np.savez("results/wsp_directions.npz", **{n.replace(".", "_"): u for n, u in directions.items()})

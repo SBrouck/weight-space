@@ -1,6 +1,6 @@
 {
   "tag": "final_run1_base",
-  "model": "/Users/sachabrouck/ai-engineering/experiments/weight-space/models/qwen3.5-0.8B-base",
+  "model": "models/qwen3.5-0.8B-base",
   "n": 64,
   "max_tokens": 8192,
   "accuracy": 0.1875,

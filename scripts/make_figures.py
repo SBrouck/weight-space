@@ -1,24 +1,23 @@
-"""Render the README figures from results/ and runs/, in a light and a dark variant.
+"""Render the README figures from the versioned files in results/ and runs/ (no model needed).
 
 Writes figures/<name>-light.png and figures/<name>-dark.png (the README picks one with
 <picture> and prefers-color-scheme). Colors: base = neutral ink, published edit = slot 1 (blue),
 agent edit = slot 2 (orange), random control = slot 3 (aqua); every series is labeled directly.
 
-Usage: uv run python scripts/make_figures.py
+Usage: uv run python scripts/make_figures.py [fig1 fig2 fig3 fig4 fig5]   (default: all)
 """
 
 from __future__ import annotations
 
-import glob
 import json
 import math
 import os
+import sys
 
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
-import mlx.core as mx  # noqa: E402
 import numpy as np  # noqa: E402
 
 THEMES = {
@@ -66,14 +65,16 @@ def save(fig, name: str, mode: str) -> None:
 
 
 def fig_anatomy(t: dict, mode: str) -> None:
-    """Per-neuron size of the published edit in the two edited down_proj matrices."""
-    base = mx.load(glob.glob("models/qwen3.5-0.8B-base/*.safetensors")[0])
-    wsp = mx.load(glob.glob("models/qwen3.5-0.8B-wsp/*.safetensors")[0])
+    """Per-neuron size of the published edit in the two edited down_proj matrices.
+
+    Reads results/edit_anatomy.json, written by scripts/diff_weights.py.
+    """
+    tensors = json.load(open("results/edit_anatomy.json"))["tensors"]
     fig, axes = plt.subplots(2, 1, figsize=(7.2, 3.0), sharex=True)
     for ax, layer in zip(axes, (15, 19)):
-        k = f"model.language_model.layers.{layer}.mlp.down_proj.weight"
-        d = np.array((wsp[k].astype(mx.float32) - base[k].astype(mx.float32)))
-        col = np.linalg.norm(d, axis=0)
+        tensor = tensors[f"model.language_model.layers.{layer}.mlp.down_proj.weight"]
+        col = np.zeros(tensor["shape"][1])
+        col[tensor["cols"]] = tensor["col_delta_norm"]
         idx = np.flatnonzero(col > 0)
         ax.vlines(idx, 0, col[idx], color=t["published"], linewidth=0.9)
         ax.set_ylim(0, col.max() * 1.25)
@@ -211,14 +212,16 @@ def fig_2b(t: dict, mode: str) -> None:
     save(fig, "fig5_2b_negative", mode)
 
 
+FIGURES = {"fig1": fig_anatomy, "fig2": fig_budget, "fig3": fig_trajectory, "fig4": fig_holdout,
+           "fig5": fig_2b}
+
+
 def main() -> None:
+    names = sys.argv[1:] or list(FIGURES)
     for mode, t in THEMES.items():
         style(t)
-        fig_anatomy(t, mode)
-        fig_budget(t, mode)
-        fig_trajectory(t, mode)
-        fig_holdout(t, mode)
-        fig_2b(t, mode)
+        for name in names:
+            FIGURES[name](t, mode)
     print(sorted(os.listdir(OUT)))
 
 

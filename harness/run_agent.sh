@@ -6,6 +6,7 @@
 # to continue from notes.md. Everything is logged to <workspace>/transcript.jsonl.
 set -euf  # -f: no globbing, the tool patterns contain *
 
+REPO=$(cd "$(dirname "$0")/.." && pwd)
 WS=$(cd "$1" && pwd)
 ROUNDS=${2:-6}
 USD=${3:-15}
@@ -15,7 +16,8 @@ SESSION=$(cat "$SESSION_FILE")
 cd "$WS"
 
 ALLOWED='Bash(./kpy:*) Bash(./fwd:*) Read Write Edit Glob Grep'
-DENIED="WebFetch WebSearch Agent Bash(cd:*) Read(/$HOME/ai-engineering/**) Read(/$HOME/.cache/**) Read(/$HOME/.claude/**)"
+# The repo (holdout ids, results, the published edit), the model caches and Claude's own config.
+DENIED="WebFetch WebSearch Agent Bash(cd:*) Read(/$REPO/**) Read(/$HOME/.cache/**) Read(/$HOME/.claude/**)"
 
 # A generation pass takes 10-30 minutes: let the agent's Bash calls run up to 45 minutes.
 export BASH_DEFAULT_TIMEOUT_MS=2700000 BASH_MAX_TIMEOUT_MS=2700000

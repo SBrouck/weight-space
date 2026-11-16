@@ -1,9 +1,10 @@
 # Lab notes
 
-The full, chronological record behind the README: every table, every run, in the order it happened.
-
-
-Gradient-free weight edits that remove thinking loops from small local models, on a Mac with MLX.
+The chronological record behind the README, in the order the runs happened. Tables of loop,
+accuracy and AUC values come from the files in `results/` and `runs/`; `scripts/report.py`
+recomputes the ones the README quotes. Throughput and wall-clock figures were read from console
+output and are not stored in `results/`. Grades reflect the regrade with
+`scripts/regrade.py` after a `\$`-parsing fix in the grader.
 
 Builds on [Sparks of Weight-Space Programming](https://rikiyat.github.io/blog/weight-space-programming) (Takehi, Teoh, Zhang, Khattab, 2026). In that work, GPT-6 Astra edited Qwen3.5-0.8B's weights without training and cut its thinking loops. Here the goals are:
 
@@ -60,8 +61,8 @@ The edited model's correct answers in the paper have a median of about 9,000 tok
 | Mean repetition score | 0.83 | 0.30 |
 | Thinking closed | 6 % | 66 % |
 | Cut at budget | 94 % | 34 % |
-| Accuracy (strict `\boxed{}`) | 3.1 % | 37.5 % |
-| Rescued / regressed | | **11 / 0** |
+| Accuracy (strict `\boxed{}`) | 6.2 % | 37.5 % |
+| Rescued / regressed | | **10 / 0** |
 | Mean tokens | 15,564 | 12,248 |
 
 Remaining failures of the edited model, read from the saved tails:
@@ -82,7 +83,7 @@ Same protocol, 16,384-token budget, batch 16, about 160–230 tok/s.
 |---|---|---|---|
 | Loop | 94 % | 19 % | **19 %** |
 | Cut at budget | 94 % | 34 % | 56 % |
-| Accuracy | 3.1 % | 37.5 % | 46.9 % |
+| Accuracy | 6.2 % | 37.5 % | 46.9 % |
 
 **Open prompts** (`data/open_prompts.jsonl`, 32 prompts, 8 in French): **the 2B loops on almost every enumeration.**
 
@@ -118,7 +119,7 @@ The only enumeration that does not loop, the chemical elements 1–60, does not 
 
 ### Second try: amplify a "conclude" direction
 
-`scripts/capture_conclude.py` contrasts the 64 tokens before `</think>` in answers that end with positions inside loops. The resulting direction `c` separates the two sets on held-out samples (AUC 0.95–0.97 in layers 4–22). In layers 9–15 it is almost the opposite of the loop direction (cos(c, −u) = 0.90–0.92), so "conclude" and "do not loop" are nearly one axis there. It is more distinct in late layers (0.75 in layers 20–21).
+`scripts/capture_conclude.py` contrasts the 64 tokens before `</think>` in answers that end with positions inside loops. The resulting direction `c` separates the two sets on held-out samples (AUC 0.94–0.97 in layers 4–22). In layers 9–15 it is almost the opposite of the loop direction (cos(c, −u) = 0.90–0.92), so "conclude" and "do not loop" are nearly one axis there. It is more distinct in late layers (0.75 in layers 20–21).
 
 Edit: `apply_edit.py --mode amplify`, `w' = w + 3 (c·w) c` on the 64 neurons per layer that push most along `c` when concluding. Screen on `data/open_holdout.jsonl`, 2 samples per prompt, 6,144 tokens:
 
@@ -144,7 +145,7 @@ Edit: `apply_edit.py --mode amplify`, `w' = w + 3 (c·w) c` on the 64 neurons pe
 - **What it cannot reach:** the holdout ids stay outside its workspace. Reads of the repo, the HF cache and `~/.claude` are denied, and its tools are limited to `./kpy`, `./fwd` and file tools inside the workspace.
 - **Final judgment:** `finalize.py` evaluates on 64 holdout problems with a normal and a strict grade. Strict counts only an answer given after `</think>`.
 
-**Run 1:** 12 passes, 91 turns, 3 h 15, about $5.2 at list price.
+**Run 1:** 12 passes, 91 turns, 3 h 15, about $4.0 at list price (cumulative `total_cost_usd` of the last CLI result row).
 
 The agent's own path:
 1. Ablating 48 loop-selective neurons did nothing. Its conclusion: the neurons are loop *detectors*, not drivers.
@@ -152,45 +153,27 @@ The agent's own path:
 3. A dose sweep found runaways at S ≥ 3–4. It also tried and dropped lexical tricks ("Wait" down, `\boxed` up). The `\boxed` idea exploited a grader loophole: a `\boxed{}` inside unfinished thinking counted.
 4. S = 2 won on its own holdout: 2/32 → 9/32, with the random-direction control at 3 vs 4.
 
-Its report is in the workspace; the pilot report is in `run1.pilot_final_report.md`.
+Its notes, scripts and reports are in `runs/run1/` (`final_report.md` and `pilot_final_report.md`).
 
 **Independent check** on 64 problems it never saw, 8,192 tokens, one sample each, paired:
 
 | | Base | Agent edit (6 columns, L20–23) | Published edit (128 columns, L15/19) |
 |---|---|---|---|
-| Accuracy | 18.8 % | 25.0 % | 28.1 % |
-| **Strict accuracy** (answer after `</think>`) | 15.6 % | 23.4 % | **28.1 %** |
-| Strict rescued / regressed (sign test) | | 9 / 4 (p = 0.27) | 12 / 4 (p = 0.08) |
+| Accuracy | 18.8 % | 25.0 % | 29.7 % |
+| **Strict accuracy** (answer after `</think>`) | 15.6 % | 23.4 % | **29.7 %** |
+| Strict rescued / regressed (sign test) | | 9 / 4 (p = 0.27) | 12 / 3 (p = 0.035) |
 | Thinking closed | 15.6 % | 85.9 % | 40.6 % |
 | Verbatim loops | 82.8 % | 60.9 % | **9.4 %** |
 
 **Reading.**
-- **The agent found a working but weaker mechanism.** Its edit is a different solution, not a rediscovery: the edited directions have |cos| 0.03–0.04 with the published one. Both edits point the right way, but with 64 problems neither gain is significant, and the agent's (+7.8 points strict) is smaller than the published one's (+12.5).
-- **Its "closed" rate is inflated by runaways.** 33 of its 55 closed answers repeat `</think>` in a loop ("…drive to town and`</think>` Let's re-evaluate…"). This is the failure it saw at higher doses, and it is more frequent on unseen problems than its estimate (7/32). The published edit removes the loop itself (9 % loops), whereas the agent's edit gives the model an exit it overuses.
+- **The agent found a working but weaker mechanism.** Its edit is a different solution, not a rediscovery: the edited directions have |cos| 0.03–0.04 with the published one. Both edits point the right way, but with 64 problems only the published edit's gain is significant at the 5 % level, and the agent's (+7.8 points strict) is smaller than the published one's (+14.1).
+- **Its "closed" rate is inflated by runaways.** 33 of its 55 closed answers still end in a verbatim loop, and 38 emit `</think>` more than once ("…drive to town and`</think>` Let's re-evaluate…"). This is the failure it saw at higher doses, and it is more frequent on unseen problems than its estimate (7/32). The published edit removes the loop itself (9 % loops), whereas the agent's edit gives the model an exit it overuses.
 - **Budget matters.** Astra had 50 passes at 32k tokens; this run had 12 at 8k. The agent spent 6 of its 12 passes learning the dose and the runaway failure.
 
 **Next.**
 - Rerun with a larger budget, two samples per problem in screens, and a runaway check in `fwd` (count of `</think>`).
 - Then point the harness at a fresh target with no known answer.
 
-## Layout
-
-```
-scripts/diff_weights.py   diff two checkpoints, test the rank-one projection hypothesis
-scripts/speed_test.py     one thinking answer: speed, peak memory, termination
-scripts/loop_eval.py      batched loop rate, accuracy and length on GSM8K-style problems
-data/gsm8k_train.jsonl    practice problems (GSM8K train, MIT licence)
-results/                  summaries and per-sample results
-models/                   downloaded checkpoints (git-ignored)
-```
-
 ## Reproduce
 
-```bash
-uv sync
-uv run hf download Qwen/Qwen3.5-0.8B --revision 2fc06364715b967f1860aea9cf38778875588b17 --local-dir models/qwen3.5-0.8B-base
-uv run hf download RikiyaT/Qwen3.5-0.8B-weight-space-programming --local-dir models/qwen3.5-0.8B-wsp
-uv run python scripts/diff_weights.py models/qwen3.5-0.8B-base models/qwen3.5-0.8B-wsp
-uv run python scripts/loop_eval.py models/qwen3.5-0.8B-base --n 32 --max-tokens 16384 --tag base_n32_t16k
-uv run python scripts/loop_eval.py models/qwen3.5-0.8B-wsp  --n 32 --max-tokens 16384 --tag wsp_n32_t16k
-```
+See the Reproducibility section of the README and the `Makefile`.

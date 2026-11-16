@@ -1,6 +1,6 @@
 {
   "tag": "final_run1_edited",
-  "model": "/Users/sachabrouck/ws-runs/run1/.edited_ckpt",
+  "model": "~/ws-runs/run1/.edited_ckpt",
   "n": 64,
   "max_tokens": 8192,
   "accuracy": 0.25,
